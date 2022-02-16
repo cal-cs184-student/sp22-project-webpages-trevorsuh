@@ -1,7 +1,272 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Courier New', sans-serif;
+  }
+</style>
+<title>CS 184 Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body style="background-color:antiquewhite;">
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging</h1>
+<h1 align="middle">Assignment 1: Rasterizer</h1>
+<h2 align="middle">Trevor Suh, Spring 2022</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="left">Overview</h2>
+
+<p>In this project, we started by exploring triangle rasterization to translate shapes represented by vectors into a pixel space. We then worked
+  to improve rasterization by supersampling to reduce the effects of aliasing ("jaggies"). With the basics of rasterization covered, we moved
+  to explore various texture sampling methods. We incorporated the use of barycentric coordinates to build our understanding of combining colors
+  and mapping coordinates between different spaces. We then worked with pixel sampling and level sampling techniques for mapping textures to a
+  screen space. During this process, we learned about the different types of sampling methods, including nearest and bilinear sampling, and the
+  effects that combining them together yields. Most of the problems I encountered were related to properly scaling my coordinates and clamping
+  values that were out of bounds; these issues were tackled using the debugging feature of the IDE. I think the idea of barycentric coordinates
+  and interpolation were the most interesting due to their applicability and effectiveness for reducing aliasing artifacts during rasterization.
+  We also touched upon the use of matrices to transform components in a screen space.
+</p>
+
+<h2 align="left">Section I: Rasterization</h2>
+
+<h3 align="left">Part 1: Rasterizing single-color triangles</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+        <img src="images/task1.png" align="middle" width="600px"/>
+        <figcaption align="middle">Screenshot: basic/test4.svg with the pixel inspector on the right side of the red triangle</figcaption>
+    </tr>
+  </table>
+</div>
+
+<p>Triangle rasterization is the process of translating a triangle, represented by three (x, y) vertices, to the pixel space of a frame buffer.
+  The first step in rasterization is to determine a sampling procedure for selecting points on the buffer. In this task, one sample per pixel
+  is taken from the frame buffer. The sample point is taken from the midpoint of the pixel, leading to a (0.5, 0.5) offset from the integer pixel
+  locations. Line equation functions,  -(x - x<sub>i</sub>)(y<sub>i+1</sub> - y<sub>i</sub>) + (y - y<sub>i</sub>)(x<sub>i+1</sub> - x<sub>i</sub>),
+  are then calculated with the (x, y) vertices of the triangle, corresponding to each edge of the triangle. The results of the functions are used
+  to determine if a point falls within the bounds of the triangle. For my logic, I check if the function results are either all greater than or equal
+  to 0 or all less than or equal to 0. By doing so, it allows me to check if a point is inside the triangle regardless of the winding order of the
+  vertices. Including the equality check is done to deal with cases where the point lands directly on the edge of the triangle. If the sample point
+  is deemed to fall within the triangle, its corresponding frame buffer pixel is set to the provided color by passing it to the fill_pixel function.
+</p>
+
+<p>My algorithm is no worse than one that checks each sample within the bounding box of the triangle because that is exactly what it is doing. It
+  determines the start and stop points for sampling based on the minimum and maximum x and y values of the triangle's vertices. This essentially
+  creates a bounding box of possible sample points around the triangle since only points that are greater than or equal to the smallest x/y values
+  and less than the largest x/y values + 1 are considered.
+</p>
+
+<h3 align="left">Part 2: Antialiasing triangles</h3>
+
+<p>Supersampling is useful because it helps reduce aliasing ("jaggies") and artifacts in rasterized images. It does this by taking more samples
+  per pixel and averaging colors from these samples to obtain a better balanced color for the overall pixel. Each subpixel point is treated like
+  a normal point during point in triangle tests, which allows for consideration of "how much" a pixel is covered by the triangle.
+</p>
+
+<p>My supersampling algorithm was implemented with changes to the rasterization pipeline during point sampling, population of the frame buffer from
+  the sample buffer, rasterizing points and lines, and resizing the sample buffer. My algorithm first calculates the square root of the sample rate
+  to determine the dimensions of the number of samples taken per pixel. This value, n, is used to determine the offsets for point sampling the frame
+  buffer, starting at 0.5n and sampling every 1/n after that. To allow for the increase in data from supersampling, the sample buffer is scaled up
+  according to the sample rate. My algorithm determines if a sample point lies within a triangle using the original vertices, in the same manner as
+  described in task 1. If a point is determined to be within the triangle, its associated color is stored in the sample buffer at its (x, y) location
+  scaled by n. Scaling by n allows for each subpixel to have a unique point entry in the sample buffer space. The scaled x and y values are floored
+  before indexing into the sample buffer array to keep each sample point matched with an integer location. To scale the inflated sample buffer back
+  down to the frame buffer dimensions, two outer for loops loop through the x and y positions of the frame buffer while two inner for loops loop
+  through each of the associated subpixel locations stored in the sample buffer and average their colors. The colors are averaged by adding the r/g/b values of
+  the color vectors for each subsample and dividing by the sample rate. The two inner for loops traverse the sample buffer in increments of n to account
+  for the increased size of the sample buffer, ensuring that each pixel in the frame buffer maps to sample_rate pixels in the sample buffer. To account
+  for the rasterization of points and lines, an extra parameter is used in the fill_pixel function. If this parameter indicates the pixel is a point or
+  line, the sample buffer is populated with sample_rate copies of the point/line color in the corresonding subsample locations so that the averaged color
+  will be the original color during downsampling. With this implementation, I can antalias my triangles by increasing the sample rate in the GUI so that
+  more samples are taken per pixel to create smoother triangles.
+  </thead>
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/task2-1.png" align="middle" width="325px"/>
+        <figcaption align="middle">Screenshot 1: basic/test4.svg (sample rate 1)</figcaption>
+      </td>
+      <td>
+        <img src="images/task2-4.png" align="middle" width="325px"/>
+        <figcaption align="middle">Screenshot 2: basic/test4.svg (sample rate 4)</figcaption>
+      </td>
+      <td>
+        <img src="images/task2-16.png" align="middle" width="325px"/>
+        <figcaption align="middle">Screenshot 3: basic/test4.svg (sample rate 16)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>These results are observed because each pixel is being sample more times as the sample rate is increased. At a sample rate of 1, sample points that
+  are taken from the middle of the pixel yield more solid white or solid pink pixels for the skinny part of the triangle. This is because the single
+  sample location yields a single color for the pixel. If the midpoint fails or passes the point in triangle test, the full pixel will be set to white
+  or pink, respectively. When the sample rate is increased to 4, however, there are 4 sample points taken equidistantly within the pixel, which introduces
+  the possibliity for some of the sample points to fall within the bounds of the triangel edges and others to not. When these color samples are then
+  averaged, the resulting pixel color will be more representative of how much the pixel is covered by the vector triangle. This explains why some of the
+  pixels in the triangle become a lighter pink while other spaces become darker. This effect is even more prominent when the sample rate is set to 16.
+</p>
+
+<h3 align="left">Part 3: Transforms</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+        <img src="images/task3.png" align="middle" width="600px"/>
+        <figcaption align="middle">Screenshot: docs/my_robot.svg</figcaption>
+    </tr>
+  </table>
+</div>
+
+<p>To implement the transforms, I used the matrices for rotations, translations, and scales described in lecture. For my cubeman, I wanted him to have
+  wave-like arms with his right leg kicking out. To achieve this, I rotated the leg component by 20 degrees and the left and right forearms by 50 degrees.
+  I also gave cubeman hands and feet by scaling the polygons to smaller sizes and translating them to the appropriate positions. I changed the colors of
+  cubeman to different shades of blue using hexadecimal color codes. Lastly, I wanted to try to add a circular element in the image, so I gave cubeman
+  an orange ball by rotating 10 squares incrementally by 10 degrees so that the vertices would make a circular shape.
+</p>
+
+<h2 align="left">Section II: Sampling</h2>
+
+<h3 align="left">Part 4: Barycentric coordinates</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/task4help.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 1: docs/task4help.svg</figcaption>
+      </td>
+      <td>
+        <img src="images/task4.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 2: basic/test7.svg</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Barycentric coordinates are a type of coordinate system that relates a point to the vertices of a triangle (in our case of a 2D plane). The
+  coordinates are represented by weights (alpha, beta, gamma) that can be used to scale the triangular vertex values to determine where a point
+  lies in relation to them. Finding barycentric coordinates can also be thought of as finding the proportional distances from the triangle
+  vertices and the lines formed by them. In code, I use the equations described in lecture to calculate alpha, beta, and gamma. When vertices
+  are associated with a color/texture, they can be weighted to produce a combined color/texture. The left image above demonstrates this phenomenon well.
+  The triangle is made up of a green, red, and blue vertex. All points within the triangle are a weighting of each of these vertex colors, which creates
+  a smooth color gradient. For example, at the very center, the color produced is an equal combinaton of red, green, and blue.
+</p>
+
+<h3 align="left">Part 5: "Pixel sampling" for texture mapping</h3>
+
+<p>Pixel sampling is a method for selecting pixels to be mapped to a screen space. For texture sampling, coordinates in the screen space (x, y)
+  are translated to coordinates in a texture space (u, v). To implement this, I use barycentric coordinates. The barycentric weights of each point
+  in screen space are calculated using the (x, y) triangle vertices. The alpha, beta, and gamma weights are then used to obtain the point in the
+  texture space by scaling the (u, v) triangle vertices. These texture coordinates are then used to set the corresponding screen space coordinate
+  with a sampled point of texture. Nearest pixel sampling is when the translated texture point is snapped to the nearest texel location. This is
+  implemented by rounding each (u, v) to the nearest integer value, since the texels are indexed by integer. Bilinear pixel sampling is when the
+  translated texture point is used to linearly interpolate the 4 nearest texels. This is implemented by first calculating the 4 nearest texel locations
+  to the point using floors and ceils. The texture colors at each of these points is then obtained from the texel array and combined to a single
+  texture color using linear interpolation. Three linear interpolations are used to combine 2 colors at a time.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/task5near1.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 1: texmap/test1.svg (nearest pixel sampling, sample rate 1)</figcaption>
+      </td>
+      <td>
+        <img src="images/task5near16.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 2: texmap/test1.svg (nearest pixel sampling, sample rate 16)</figcaption>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/task5linear1.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 3: texmap/test1.svg (bilinear pixel sampling, sample rate 1)</figcaption>
+      </td>
+      <td>
+        <img src="images/task5linear16.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 4: texmap/test1.svg (bilinear pixel sampling, sample rate 16)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Differences in sampling methods are best illustrated with the white lines and continent edges in the above images. Screenshot 1, which uses
+  nearest pixel sampling, has lines with clear jaggies. Screenshot 3, which uses bilinear pixel sampling, is much more blended with less distinct
+  jaggies. The overall map also becomes much smoother with the use of bilinear pixel sampling. Increasing the sample rate to 16 reduces aliasing
+  for both nearest and bilinear pixel sampling, creating a smoother image. One situation in which there would be a large difference betwen the
+  two methods would be at the interface of different colors, especially in the case of curved lines and edges. Since nearest pixel sampling will
+  snap texture samples to a single pixel, it will produce more aliasing. Conversely, bilinear pixel sampling will be able to produce much smoother
+  lines due to the averaging of multiple texture samples.
+</p>
+
+<h3 align="left">Part 6: "Level sampling" with mipmaps for texture mapping</h3>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/task6lzpn.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 1: texmap/task6image.svg (level zero sampling, nearest pixel sampling)</figcaption>
+      </td>
+      <td>
+        <img src="images/task6lzpl.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 2: texmap/task6image.svg (level zero sampling, bilinear pixel sampling)</figcaption>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/task6lnpn.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 3: texmap/task6image.svg (nearest level sampling, nearest pixel sampling)</figcaption>
+      </td>
+      <td>
+        <img src="images/task6lnpl.png" align="middle" width="500px"/>
+        <figcaption align="middle">Screenshot 4: texmap/task6image.svg (nearest level sampling, bilinear pixel sampling)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>Level sampling is a method for selecting a mipmap level to be used for pixel sampling. It is used with mipmaps to reduce aliasing artifacts.
+  The two types of level sampling are nearest level sampling and bilinear level sampling. In both cases, we start by calculating the level D
+  using barycentric coordinates. This is implemented by obtaining the (u, v) coordinates for (x, y), (x+1, y), and (x, y+1). Since (u, v) coordinates
+  are in the range [0, 1] they must also be scaled by width and height to allow for proper indexing into the texel space. These values are then used
+  to calculate the difference vectors that are plugged into the equation for D, which uses dot products and a log. D is used differently
+  depending on the type of sampling. In nearest level sampling, the level is rounded to the nearest integer mipmap level. This level is then passed
+  to either pixel sampling method to obtain texture samples. In bilinear level sampling, the calculated level is floored and ceiled to the nearest
+  2 mipmap levels. Texels are sampled at both of the mipmap levels using either of the pixel sampling methods and then linearly interpolated together.
+  When bilinear pixel sampling is used in combination with bilinear level sampling, we obtain a trilinear filtering effect.
+</p>
+
+<p>Different sampling techniques will incur various tradeoffs in speed, memory usage, and antialiasing effects. Adjusting the number of samples per pixel
+  with supersampling can produce powerful antialising effects, but can be slower and require more memory. The costs of pixel sampling depend on the type
+  of sampling used. Bilinear pixel sampling will take longer than nearest pixel sampling due to the additional computations for linear interpolation.
+  However, bilinear pixel sampling will generally provide better antialising effects. Level sampling with mipmaps can be faster due to the use of low-resolution
+  textures during sampling. However, more memory is required to store the additional mipmaps. For the level sampling itself, bilinear level sampling will take
+  longer than nearest level sampling. Bilinear level sampling with mipmaps will generally produce better antialising effects, especially for screen images
+  with perspective differences.
+</p>
+
+</body>
 </html>
