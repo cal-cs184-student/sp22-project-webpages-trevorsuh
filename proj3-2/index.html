@@ -1,7 +1,237 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Courier New', sans-serif;
+  }
+</style>
+<title>CS 184 Path Tracer</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body style="background-color:antiquewhite;">
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging</h1>
+<h1 align="middle">Assignment 3-2: Path Tracer</h1>
+<h2 align="middle">Trevor Suh, Spring 2022</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="left">Overview</h2>
+
+<p>
+This assignment expanded upon assignment 3-1 to add the functionality of rendering images that include non-diffuse materials. I chose to implement Parts 1 and 2,
+which involved programming the functions for bsdf of mirror, glass, and isotropic conductor materials. The workflow for each of these parts was generally
+similar, first implementing functions to calculate reflectance and transmittance values and then using them in the bsdf sample functions. There were not many
+problems as a lot of the programming involved directly translating presented equations and pseudocode into code.
+</p>
+
+<br>
+
+<h2 align="left">Part 1: Mirror and Glass Materials</h2>
+
+<p>
+In this part, we implemented reflection and refraction functions to be able to render materials that display these properties. The equation for perfect
+specular reflection from lecture was used to reflect wo about the normal vector (0, 0, 1). This reflection algorithm was then used to model behavior of rays
+on mirror objects by using it to calculate reflectance and weighting by cosine. A similar process was followed for refraction, in which the given equations
+were translated into code. Since we must consider whether a ray is entering or exiting the object for refraction calculations, the implementation used more
+if statements to differentiate the two scenarios. For example, the eta value was either ior or 1/ior depending on whether the ray was entering or exiting
+the object. The refraction algorithm was then used to model behavior of rays on refractive objects by calculating
+transmittance and weighting by cosine and eta. Finally, we combined the reflection and refraction functions to be able to render materials that use both,
+such as glass. We used Schlick's approximation to determine the ratio of reflection to refractance for each ray. Depending on Schlick's, we would either
+reflect or refract the light based on a coin flip.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/spheres_1024_8_0.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 1: CBspheres.dae (-s 1024 -l 8 -m 0)</figcaption>
+      </td>
+      <td>
+        <img src="images/spheres_1024_8_1.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 2: CBspheres.dae (-s 1024 -l 8 -m 1)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+At a max ray depth of 0, there is no illumination so only the overhead light is visible. At a ray depth of 1, direct lighting illuminates the cornell
+box and creates white patches on the spheres. With a depth of 1, there are not enough bounces of light to be able to reflect or refract anything, which
+explains why the spheres are mostly black with only direct lighting contributions from the overhead light.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+		<tr>
+			<td>
+				<img src="images/spheres_1024_8_2.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 3: CBspheres.dae (-s 1024 -l 8 -m 2)</figcaption>
+			</td>
+			<td>
+				<img src="images/spheres_1024_8_3.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 4: CBspheres.dae (-s 1024 -l 8 -m 3)</figcaption>
+			</td>
+		</tr>
+  </table>
+</div>
+
+<p>
+At a ray depth of 2, the mirror (reflective)
+material is able to contribute to the image, as is illustrated by the back sphere becoming visible and the front sphere also demonstrating reflection
+points. Even though the cornell box ceiling is illuminated, the reflection of the ceiling on the back sphere shows it as black due to the lack of ray depth to be able to
+fully trace a ray from the light source to an object to the ceiling and then to the sphere. There is also not enough ray depth to be able to render
+refractive behavior, which explains why the front sphere is mostly dark. At a ray depth of 3, refraction is able to contribute to the image, so the front
+sphere is fully visible. The reflection of the front sphere on the back sphere is still black here because there is not enough ray depth to trace the
+refraction of the rays in the front sphere in addition to reflecting the contributions of this refraction.
+</p>
+
+<div align="middle">
+  <table style="width=100%">
+		<tr>
+			<td>
+				<img src="images/spheres_1024_8_4.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 5: CBspheres.dae (-s 1024 -l 8 -m 4)</figcaption>
+			</td>
+			<td>
+				<img src="images/spheres_1024_8_5.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 6: CBspheres.dae (-s 1024 -l 8 -m 5)</figcaption>
+			</td>
+		</tr>
+  </table>
+</div>
+<div align="middle">
+  <table style="width=100%">
+		<tr>
+			<td>
+				<img src="images/spheres_1024_8_100.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 7: CBspheres.dae (-s 1024 -l 8 -m 100)</figcaption>
+			</td>
+		</tr>
+  </table>
+</div>
+
+<p>
+At a ray depth of 4, the image is generally
+fully rendered. The reflection of the front sphere on the back sphere is blue, and the blue wall has a white dot where the light is refracting and focusing.
+The shadows of the sphere are also lighter, with the front refractive sphere refracting light onto its shadow as well. At greater ray depths of 5 and 100,
+the rendering does not change much as the contributions of further ray bounces converge. No new multibounce effects appear at these depths.
+</p>
+
+<br>
+
+<h2 align="left">Part 2: Microfacet Material</h2>
+
+<p>
+In this part, we implemented the microfacet model which allows for rendering of reflective isotropic conductors. We started by implementing the general
+microfacet bsdf equation and then implementing each of the inner functions, such as the Fresnel term and the normal distribution function. The Fresnel
+term accounts for the reflection of light at the air and conductor interface. For each of
+these functions, the programming was pretty straightforward as it just involved translating a provided equation into code. The more substantial task
+of this part was implementing importance sampling based on a Beckmann distribution. We used a random number generator and integrated pdf equations to
+calculate the spherical theta and phi coordinates for a sampled microfacet normal vector. The vector was then transformed into cartesian coordinates
+and used to reflect wo about it. The final bsdf value of the microfacet was then calculated using this reflected vector. Throughout this function, if
+statements were included to ensure no invalid math was being performed (such as division by zero) to remove any black dot noise. One problem I encountered
+in this part was that I had initially forgotten to translate from spherical to cartesian coordinates, creating incorrect renderings.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/dragon_1024_4_7_0.005.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 1: CBdragon_microfacet_au.dae (-s 1024 -l 4 -m 7 -α 0.005)</figcaption>
+      </td>
+      <td>
+        <img src="images/dragon_1024_4_7_0.05.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 2: CBdragon_microfacet_au.dae (-s 1024 -l 4 -m 7 -α 0.05)</figcaption>
+      </td>
+    </tr>
+		<tr>
+			<td>
+				<img src="images/dragon_1024_4_7_0.25.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 3: CBdragon_microfacet_au.dae (-s 1024 -l 4 -m 7 -α 0.25)</figcaption>
+			</td>
+			<td>
+				<img src="images/dragon_1024_4_7_0.5.png" align="middle" width="500px"/>
+				<figcaption align="middle">Img 4: CBdragon_microfacet_au.dae (-s 1024 -l 4 -m 7 -α 0.5)</figcaption>
+			</td>
+		</tr>
+  </table>
+</div>
+
+<p>
+As the roughness value (alpha) increases, the dragon becomes less shiny and more matte. The difference is especially visible when looking at image 1
+with an alpha of 0.005 and image 4 with an alpha of 0.5. Larger alpha values lead to rougher surfaces, which diffuse light more effectively. This is
+because rough surfaces reflect light into more directions, creating a more spread out reflection. Comparatively, smoother surfaces will reflect light
+in a more concentrated manner, leading to light reflected into fewer directions.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/bunny_64_1_7_cos.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 5: CBbunny_microfacet_cu.dae (-s 64 -l 1 -m 7 cosine)</figcaption>
+      </td>
+      <td>
+        <img src="images/bunny_64_1_7_imp.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 6: CBbunny_microfacet_cu.dae (-s 64 -l 1 -m 7 importance)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+Image 5 shows a rendering with cosine hemisphere sampling, and image 6 shows a rendering with importance sampling. The cosine sampling image is much
+noisier with more black spots visible on the bunny. This is because cosine hemisphere sampling draws rays from a uniform distribution, leading to more
+rays that do not contribute any light to the image. Importance sampling, on the other hand, focuses on rays of more substantial contribution, which makes
+it easier to fully render the copper bunny with less time and samples.
+</p>
+
+<br>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/dragon_1024_4_7_pt_0.5.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 7: CBdragon_microfacet_pt.dae (-s 1024 -l 4 -m 7 -α 0.5)</figcaption>
+      </td>
+      <td>
+        <img src="images/dragon_1024_4_7_pt_0.25.png" align="middle" width="500px"/>
+        <figcaption align="middle">Img 8: CBdragon_microfacet_pt.dae (-s 1024 -l 4 -m 7 -α 0.25)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+The above dragons were rendered using platinum (Pt). The eta and k values were obtained using the wavelengths 614 nm, 549 nm, and 466 nm. The eta values
+were 0.46138, 0.46608, and 0.58870. The k values were 5.9022, 5.0942, and 3.9742. Image 7 was rendered with an alpha value of 0.5, and image 8 was rendered
+with an alpha value of 0.25.
+</p>
+
+</body>
 </html>
